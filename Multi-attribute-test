@@ -1,0 +1,153 @@
+Multi Attribute test
+
+;//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+;////////////////////////////////////////// Begining of Trial /////////////////////////////////////////////////////
+;//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+;Inserts annotative Amenity Television on T-Jack layer 
+;by Hadean Roth
+;2016-03-15
+
+(defun c:AmenityTelevisionATTEDIT ( / )
+
+	(command "undo" "g")
+	(command "cmdecho" "0")
+	(command "attdia" "1")
+	
+	(cond 
+		((equal (tblsearch "layer" "T-Jack") nil)
+			(setq acadDocument (vla-get-activedocument (vlax-get-acad-object))) 
+			(setq theLayers (vla-get-layers acadDocument)) 
+			(setq newLayer1 (vla-add theLayers "T-Jack"))
+			(vla-put-color newLayer1 80)
+			(vla-put-linetype newLayer1 "Continuous")
+		)
+	)
+	
+	(princ "\nSpecify insertion point:")
+
+	(command "-layer" "thaw" "T-Jack" "")
+	(command "attreq" "0")
+	(command "-insert" "P:\\AndrewR\\ACAD\\ACAP MEP\\CSA-V Blocks & Symbols Library\\MULTI TRIAL.dwg" PAUSE "1" "1" PAUSE)
+	(command "change" "l" "" "p" "la" "T-Jack" "")
+
+(princ "isnertion complete...     ")	
+
+;getting block and attribute positions
+	(setq blk entlast)
+	(setq blkprop (entget (entlast)))
+	(setq blkposrealx (nth 1 (assoc 10 blkprop)))
+	(setq blkposrealy (nth 2 (assoc 10 blkprop)))
+
+	(setq attprop1 (entget (entnext (blk))))
+	(setq attpos1 (strcat (rtos (nth 1 (assoc 10 attprop1))) "," (rtos (nth 2 (assoc 10 attprop1))) ",0"))
+	(setq attprop2 (entget (entnext (entnext (blk)))))
+	(setq attpos2 (strcat (rtos (nth 1 (assoc 10 attprop2))) "," (rtos (nth 2 (assoc 10 attprop2))) ",0"))
+(princ "Get positions complete...     ")
+
+;getting the insertion angle
+	(setq angrad (cdr (assoc 50 blkprop)))
+	(setq angdeg (/ (* angrad 180) pi))
+	(setq stringangle (rtos angdeg 2 5))
+(princ "Angle complete...     ")
+
+;Conditional statements for the positional changes
+	(cond
+		((and (> angdeg 0)(<= angdeg 90))
+			(setq ca1 -1.0)
+			(setq ca2 1.0)
+		)
+		((and (> angdeg 90)(<= angdeg 180))
+			(setq ca1 -1.0)
+			(setq ca2 -1.0)
+		)
+		((and (> angdeg 180)(< angdeg 270))
+			(setq ca1 1.0)
+			(setq ca2 -1.0)
+		)
+		((and (>= angdeg 270)(<= angdeg 360))
+			(setq ca1 1.0)
+			(setq ca2 1.0)
+		)
+		((and (= angdeg 0))
+			(setq ca1 1.0)
+			(setq ca2 1.0)
+		)
+	)
+(princ "Conditional statements completed...")
+
+;Setting Pickbox expansion sizes
+	(setq blkscale (cdr (assoc 41 blkprop)))
+	(setq explength (/ (* blkscale 3.0) 96.0))
+
+;setting positions for attribute pickboxes
+	(setq attboxstart1 (strcat (rtos (- (nth 1 (assoc 10 attprop1)) explength)2 5) "," (rtos (- (nth 2 (assoc 10 attprop1)) explength)2 5) ",0"))
+	(setq attboxstart2 (strcat (rtos (- (nth 1 (assoc 10 attprop2)) explength)2 5) "," (rtos (- (nth 2 (assoc 10 attprop2)) explength)2 5) ",0"))
+	(setq attboxend1 (strcat (rtos (+ (nth 1 (assoc 10 attprop1)) explength)2 5) "," (rtos (+ (nth 2 (assoc 10 attprop1)) explength)2 5) ",0"))
+	(setq attboxend2 (strcat (rtos (+ (nth 1 (assoc 10 attprop2)) explength)2 5) "," (rtos (+ (nth 2 (assoc 10 attprop2)) explength)2 5) ",0"))
+(princ "Setting pickboxes complete...     ")
+	;(command "line" attboxstart1 attboxend1 "")
+	;(command "line" attboxstart2 attboxend2 "")
+
+;Getting the position of the center of the circle
+	(setq r18 (+ 15.0 ( / 107.0 256.0 )))
+	(setq scaledradius (/ (* r18 blkscale) 96.0))
+	(setq circentdeltax (* scaledradius (cos (+ angrad (/ PI 2.0)))))
+	(setq circentdeltay (* scaledradius (sin (+ angrad (/ PI 2.0)))))
+
+	(setq circentx (+ blkposrealx circentdeltax))
+	(setq circenty (+ blkposrealy circentdeltay))
+	(setq circentpostr (strcat (rtos circentx 2 3) "," (rtos circenty 2 3) ",0"))
+	;(command "line" circentpostr "0,0,0" "")
+(princ "Getting the center of the circle complete...")
+
+;Setting new positions for the attributes
+	(setq att1diffx (- (nth 1 (assoc 10 attprop1)) circentx))
+	(setq att1diffy (- (nth 2 (assoc 10 attprop1)) circenty))
+	(setq att2diffx (- (nth 1 (assoc 10 attprop2)) circentx))
+	(setq att2diffy (- (nth 2 (assoc 10 attprop2)) circenty))
+	(setq att1rad (expt (+ (expt att1diffx 2) (expt att1diffy 2)) 0.5))
+	(setq att2rad (expt (+ (expt att2diffx 2) (expt att2diffy 2)) 0.5))
+
+	(setq att1posx (rtos (+ circentx (* ca1 att1rad)) 2 4))
+	(setq att1posy (rtos circenty 2 4))
+	(setq att2posx (rtos circentx 2 4))
+	(setq att2posy (rtos (+ circenty (* ca2 att2rad)) 2 4))
+
+	(setq att1newpos (strcat att1posx "," att1posy))
+	(setq att2newpos (strcat att2posx "," att2posy))
+	;(command "line" att1newpos circentpostr "")
+	;(command "line" att2newpos circentpostr "")
+
+(princ "Setting new positions complete...")
+
+;Changing osnaps settings
+	(setq oldosmode (getvar "OSMODE"))
+	(setvar "OSMODE" 0)
+
+	(command "-ATTEDIT" "Y" "MULTI TRIAL" "TAG2" "" "crossing" attboxstart1 attboxend1 "a" "0" "")
+(princ "Completed first attribute rotation...")
+
+	(command "-ATTEDIT" "Y" "MULTI TRIAL" "TV" "" "crossing" attboxstart2 attboxend2 "a" "0" "")
+(princ "Completed second attribute rotation...")
+
+	(command "-attedit" "y" "MULTI TRIAL" "TAG2" "" "crossing" attboxstart1 attboxend1 "po" att1newpos "")
+(princ "completed first attirbute position change...")
+
+
+	(command "-attedit" "y" "MULTI TRIAL" "TV" "" "crossing" attboxstart2 attboxend2 "po" att2newpos "")
+(princ "completed second attribute position change...")
+	(setvar "OSMODE" oldosmode)
+	
+(princ "!!!!!!!!!!!!!!!!!!YOU DID IT!!!!!!!!!!!!!!!")
+
+	(command "undo" "e")
+	(setq *error* temperr)
+	(command "attreq" "1")
+(princ)
+)
+
+;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
